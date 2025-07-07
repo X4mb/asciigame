@@ -4,13 +4,14 @@ import time
 import os
 from dungeon import Dungeon
 from entities import Player, Item
-from ascii_art import get_title_screen, get_game_over_screen, get_combat_art
+from ascii_art import get_title_screen, get_game_over_screen, get_combat_art, get_animation_frames
 
 class Game:
     def __init__(self):
         self.dungeon = Dungeon()
         self.player = None  # Will be set after class selection
         self.is_running = True
+        self.test_mode = False  # Flag to disable interactive prompts during tests
         self.last_move = (0, 0)  # Track last movement direction (dx, dy)
 
     def show_class_selection(self):
@@ -250,7 +251,79 @@ class Game:
                     msvcrt.getch()
                     break
 
-    def get_combat_spell_or_skill(self):
+    def show_animation(self, name, monster, log):
+        """Show animation within the combat screen"""
+        if self.player is None:
+            return
+            
+        frames = get_animation_frames(name)
+        for frame in frames:
+            # Clear screen and redraw combat interface with animation
+            os.system('cls')
+            
+            # Display combat interface
+            print("=" * 80)
+            print("                                    COMBAT")
+            print("=" * 80)
+            print()
+            
+            # Get monster type for art
+            monster_type = self.get_monster_type(monster)
+            
+            # Player and monster ASCII art side by side
+            player_art = get_combat_art('player', 'attack') or ''
+            monster_art = get_combat_art(monster_type, 'hurt') or ''
+            
+            player_lines = player_art.split('\n')
+            monster_lines = monster_art.split('\n')
+            
+            # Display them side by side with animation in the middle
+            max_lines = max(len(player_lines), len(monster_lines), len(frames))
+            for i in range(max_lines):
+                player_line = player_lines[i] if i < len(player_lines) else ""
+                monster_line = monster_lines[i] if i < len(monster_lines) else ""
+                animation_line = frames[i] if i < len(frames) else ""
+                
+                # Center the animation between player and monster
+                print(f"{player_line:<35} {animation_line:^10} {monster_line}")
+            
+            print()
+            print("-" * 80)
+            # Display HP and MP/SP based on class
+            if self.player.max_stamina > 0:
+                print(f"Your HP: {self.player.hp}/{self.player.max_hp} | SP: {self.player.stamina}/{self.player.max_stamina}")
+            else:
+                print(f"Your HP: {self.player.hp}/{self.player.max_hp} | MP: {self.player.mana}/{self.player.max_mana}")
+            print(f"{monster.name} HP: {monster.hp}/{monster.max_hp}")
+            
+            # Display potions in inventory
+            health_potions = 0
+            mana_potions = 0
+            stamina_potions = 0
+            for item in self.player.inventory:
+                if item.name == 'Health Potion':
+                    health_potions += item.quantity
+                elif item.name == 'Mana Potion':
+                    mana_potions += item.quantity
+                elif item.name == 'Stamina Potion':
+                    stamina_potions += item.quantity
+            
+            if health_potions > 0 or mana_potions > 0 or stamina_potions > 0:
+                potion_display = f"Potions: HP({health_potions})"
+                if mana_potions > 0:
+                    potion_display += f" MP({mana_potions})"
+                if stamina_potions > 0:
+                    potion_display += f" SP({stamina_potions})"
+                print(potion_display)
+            
+            print()
+            print("Battle Log:")
+            for entry in log[-3:]:
+                print(f"  {entry}")
+            
+            time.sleep(0.2)
+
+    def get_combat_spell_or_skill(self, monster=None, log=None):
         """Get spell or skill selection during combat"""
         if self.player is None:
             return None
@@ -260,7 +333,10 @@ class Game:
             if not learned_spells:
                 return None
                 
-            os.system('cls')
+            # Redraw combat screen if provided
+            if monster is not None and log is not None:
+                self.display_combat_screen(monster, log)
+                
             print("=" * 60)
             print("                            CAST SPELL")
             print("=" * 60)
@@ -268,18 +344,17 @@ class Game:
             print(f"Your MP: {self.player.mana}/{self.player.max_mana}")
             print()
             
-            for spell_key, spell_data in learned_spells.items():
+            spell_keys = list(learned_spells.keys())
+            for i, spell_key in enumerate(spell_keys):
+                spell_data = learned_spells[spell_key]
                 can_cast = self.player.mana >= spell_data['mana_cost']
                 status = "✓" if can_cast else "✗"
-                print(f"{spell_key.upper()}: {spell_data['name']} ({spell_data['mana_cost']} MP) {status}")
+                print(f"{i+1}: {spell_data['name']} ({spell_data['mana_cost']} MP) {status}")
                 print(f"   {spell_data['description']}")
                 print()
             
-            print("Controls:")
-            spell_keys = list(learned_spells.keys())
-            for spell_key in spell_keys:
-                print(f"{spell_key.upper()}: {learned_spells[spell_key]['name']}")
-            print("Q: Cancel")
+            print("Controls: 1-9 = Select spell, Q = Cancel")
+            print("=" * 60)
             
             while True:
                 key = msvcrt.getch().decode('utf-8').lower()
@@ -288,31 +363,39 @@ class Game:
                     return None
                 elif key == 'q':
                     return None
-                elif key in learned_spells:
-                    return ('spell', key)
+                elif key.isdigit():
+                    spell_index = int(key) - 1
+                    if 0 <= spell_index < len(spell_keys):
+                        spell_key = spell_keys[spell_index]
+                        return ('spell', spell_key)
         else:
             learned_skills = self.player.get_learned_skills()
             if not learned_skills:
                 return None
                 
-            os.system('cls')
+            # Redraw combat screen if provided
+            if monster is not None and log is not None:
+                self.display_combat_screen(monster, log)
+                
             print("=" * 60)
             print("                            USE SKILL")
             print("=" * 60)
             print()
-            print(f"Your HP: {self.player.hp}/{self.player.max_hp}")
+            print(f"Your HP: {self.player.hp}/{self.player.max_hp} | SP: {self.player.stamina}/{self.player.max_stamina}")
             print()
             
-            for skill_key, skill_data in learned_skills.items():
-                print(f"{skill_key.upper()}: {skill_data['name']}")
+            skill_keys = list(learned_skills.keys())
+            for i, skill_key in enumerate(skill_keys):
+                skill_data = learned_skills[skill_key]
+                can_use = self.player.stamina >= skill_data.get('stamina_cost', 0)
+                status = "✓" if can_use else "✗"
+                stamina_cost = skill_data.get('stamina_cost', 0)
+                print(f"{i+1}: {skill_data['name']} ({stamina_cost} SP) {status}")
                 print(f"   {skill_data['description']}")
                 print()
             
-            print("Controls:")
-            skill_keys = list(learned_skills.keys())
-            for skill_key in skill_keys:
-                print(f"{skill_key.upper()}: {learned_skills[skill_key]['name']}")
-            print("Q: Cancel")
+            print("Controls: 1-9 = Select skill, Q = Cancel")
+            print("=" * 60)
             
             while True:
                 key = msvcrt.getch().decode('utf-8').lower()
@@ -321,8 +404,11 @@ class Game:
                     return None
                 elif key == 'q':
                     return None
-                elif key in learned_skills:
-                    return ('skill', key)
+                elif key.isdigit():
+                    skill_index = int(key) - 1
+                    if 0 <= skill_index < len(skill_keys):
+                        skill_key = skill_keys[skill_index]
+                        return ('skill', skill_key)
 
     def get_monster_type(self, monster):
         """Get monster type for ASCII art"""
@@ -369,8 +455,33 @@ class Game:
         
         print()
         print("-" * 80)
-        print(f"Your HP: {self.player.hp}/{self.player.max_hp} | MP: {self.player.mana}/{self.player.max_mana}")
+        # Display HP and MP/SP based on class
+        if self.player.max_stamina > 0:
+            print(f"Your HP: {self.player.hp}/{self.player.max_hp} | SP: {self.player.stamina}/{self.player.max_stamina}")
+        else:
+            print(f"Your HP: {self.player.hp}/{self.player.max_hp} | MP: {self.player.mana}/{self.player.max_mana}")
         print(f"{monster.name} HP: {monster.hp}/{monster.max_hp}")
+        
+        # Display potions in inventory
+        health_potions = 0
+        mana_potions = 0
+        stamina_potions = 0
+        for item in self.player.inventory:
+            if item.name == 'Health Potion':
+                health_potions += item.quantity
+            elif item.name == 'Mana Potion':
+                mana_potions += item.quantity
+            elif item.name == 'Stamina Potion':
+                stamina_potions += item.quantity
+        
+        if health_potions > 0 or mana_potions > 0 or stamina_potions > 0:
+            potion_display = f"Potions: HP({health_potions})"
+            if mana_potions > 0:
+                potion_display += f" MP({mana_potions})"
+            if stamina_potions > 0:
+                potion_display += f" SP({stamina_potions})"
+            print(potion_display)
+        
         print()
         print("Battle Log:")
         for entry in log[-3:]:
@@ -385,30 +496,23 @@ class Game:
             
         # Player's turn
         if action == 'a':
-            # Show attack animation
             self.display_combat_screen(monster, log, 'attack', 'idle')
             time.sleep(0.5)
-            
             damage_to_monster = max(1, player.attack - monster.defense)
             monster.take_damage(damage_to_monster)
             log.append(f"You hit {monster.name} for {damage_to_monster} damage!")
-            
-            # Show monster hurt animation
             self.display_combat_screen(monster, log, 'idle', 'hurt')
             time.sleep(0.5)
-            
             if not monster.is_alive():
                 log.append(f"You defeated the {monster.name}!")
                 player.gain_exp(monster.exp_value)
                 log.append(f"Gained {monster.exp_value} experience points!")
-                
-                # Show search message and loot
                 self.display_combat_screen(monster, log, 'idle', 'hurt')
                 print(f"\nYou search the {monster.name}'s remains...")
                 time.sleep(1.0)
-                
                 # Generate loot
-                loot = monster.get_loot()
+                player_class = self.player.player_class if self.player else None
+                loot = monster.get_loot(player_class)
                 if loot:
                     print("You found:")
                     for item_tuple in loot:
@@ -420,13 +524,14 @@ class Game:
                             item = Item(monster.x, monster.y, '!', 'Health Potion', {'heal': 15}, 'potion', quantity, 0.5)
                         elif item_type == 'mana_potion':
                             item = Item(monster.x, monster.y, '~', 'Mana Potion', {'mana': 20}, 'potion', quantity, 0.5)
+                        elif item_type == 'stamina_potion':
+                            item = Item(monster.x, monster.y, '&', 'Stamina Potion', {'stamina': 15}, 'potion', quantity, 0.5)
                         elif item_type == 'sword':
                             item = Item(monster.x, monster.y, 'S', 'Steel Sword', {'attack': 5}, 'weapon', quantity, 3.0)
                         elif item_type == 'armor':
                             item = Item(monster.x, monster.y, 'A', 'Leather Armor', {'defense': 2}, 'armor', quantity, 8.0)
                         else:
                             continue  # Skip unknown item types
-                        
                         success, message = player.add_to_inventory(item)
                         if success:
                             print(f"  - {item.name}")
@@ -434,22 +539,28 @@ class Game:
                             print(f"  - {item.name} (couldn't carry: {message})")
                 else:
                     print("  Nothing of value.")
-                
-                print("\nPress any key to continue...")
-                msvcrt.getch()
-                
+                if not self.test_mode:
+                    print("\nPress any key to continue...")
+                    msvcrt.getch()
                 if player.level > 1:
                     log.append(f"Level up! You are now level {player.level}!")
                 return True, log
         elif action == 'h':
-            if player.hp < player.max_hp:
-                player.heal(5)
-                log.append("You heal yourself for 5 HP!")
+            # Use a health potion from inventory if available
+            potion_found = None
+            for item in player.inventory:
+                if item.name == 'Health Potion' and item.item_type == 'potion' and item.quantity > 0:
+                    potion_found = item
+                    break
+            if potion_found:
+                potion_found.use(player)
+                player.remove_from_inventory(potion_found)
+                log.append("You use a Health Potion and restore 15 HP!")
             else:
-                log.append("You are already at full health!")
+                log.append("No health potions left!")
         elif action == 'x':
             # Cast spell or use skill
-            result = self.get_combat_spell_or_skill()
+            result = self.get_combat_spell_or_skill(monster, log)
             if result:
                 action_type, key = result
                 if action_type == 'spell':
@@ -457,7 +568,8 @@ class Game:
                     spell_data = learned_spells[key]
                     if player.mana >= spell_data['mana_cost']:
                         player.use_mana(spell_data['mana_cost'])
-                        
+                        # Show spell animation in combat screen
+                        self.show_animation(key, monster, log)
                         if 'damage' in spell_data:
                             spell_damage = spell_data['damage']
                             monster.take_damage(spell_damage)
@@ -475,36 +587,38 @@ class Game:
                 else: # action_type == 'skill'
                     learned_skills = player.get_learned_skills()
                     skill_data = learned_skills[key]
-                    
+                    # Check stamina cost
+                    if 'stamina_cost' in skill_data:
+                        if player.stamina < skill_data['stamina_cost']:
+                            log.append("Not enough stamina!")
+                            return None, log
+                        player.use_stamina(skill_data['stamina_cost'])
+                    # Show skill animation in combat screen
+                    self.show_animation(key, monster, log)
                     # Apply skill effects
                     damage_dealt = 0
                     if 'damage' in skill_data:
                         damage_dealt = skill_data['damage']
                         monster.take_damage(damage_dealt)
                         log.append(f"You use {skill_data['name']} and deal {damage_dealt} damage!")
-                    
                     # Handle special skill effects
                     if 'stun' in skill_data and skill_data['stun']:
                         # Stun effect (skip monster's next turn)
                         monster.stunned = True
                         log.append(f"The monster is stunned!")
-                    
                     if 'self_heal' in skill_data:
                         heal_amount = skill_data['self_heal']
                         player.heal(heal_amount)
                         log.append(f"You heal {heal_amount} HP!")
-                    
                     if 'dodge' in skill_data and skill_data['dodge']:
                         # Dodge effect (next attack will be dodged)
                         player.dodging = True
                         log.append(f"You prepare to dodge the next attack!")
-                    
                     if 'poison' in skill_data:
                         poison_damage = skill_data['poison']
                         monster.poisoned = True
                         monster.poison_damage = poison_damage
                         log.append(f"The monster is poisoned!")
-                    
                     if damage_dealt == 0 and not any(key in skill_data for key in ['stun', 'self_heal', 'dodge', 'poison']):
                         log.append(f"You use {skill_data['name']}!")
             else:
@@ -533,19 +647,16 @@ class Game:
                 log.append("The monster is stunned and cannot attack!")
                 monster.stunned = False
             else:
-                # Check if player is dodging
+                # Passive rogue dodge
+                import random
+                if hasattr(player, 'dodge_chance') and player.dodge_chance > 0:
+                    if random.random() < player.dodge_chance:
+                        log.append("You nimbly dodge the attack!")
+                        return None, log
+                # Check if player is dodging (from skill)
                 if player.dodging:
-                    import random
-                    if random.random() < 0.7:  # 70% chance to dodge
-                        log.append("You successfully dodge the attack!")
-                        player.dodging = False
-                    else:
-                        log.append("You fail to dodge the attack!")
-                        player.dodging = False
-                        # Calculate damage
-                        damage = max(1, monster.attack - player.defense)
-                        player.take_damage(damage)
-                        log.append(f"The monster attacks for {damage} damage!")
+                    log.append("You dodge the monster's attack!")
+                    player.dodging = False
                 else:
                     # Normal attack
                     damage = max(1, monster.attack - player.defense)
@@ -574,7 +685,7 @@ class Game:
                 return
         while monster.is_alive() and self.player.hp > 0:
             self.display_combat_screen(monster, log)
-            action = self.get_combat_action()
+            action = self.get_combat_action(monster, log)
             result, log = self.combat_round(self.player, monster, action, log)
             if result == True:
                 self.dungeon.remove_monster(monster)
@@ -589,7 +700,7 @@ class Game:
                 msvcrt.getch()
                 break
 
-    def get_combat_action(self):
+    def get_combat_action(self, monster=None, log=None):
         actions = [('Attack', 'a'), ('Heal', 'h'), ('Run', 'r')]
         # Add spell/skill if available
         if self.player:
@@ -604,7 +715,9 @@ class Game:
                     actions.append(('Use Skill', 'x'))
         selected = 0
         while True:
-            # Show action selection overlay
+            # Redraw the full combat screen if monster and log are provided
+            if monster is not None and log is not None:
+                self.display_combat_screen(monster, log)
             print("\n" + "=" * 60)
             print("Choose your action:")
             for i, (label, _) in enumerate(actions):
@@ -621,24 +734,8 @@ class Game:
                 return None
             elif key == 'w':
                 selected = (selected - 1) % len(actions)
-                # Just redraw the action selection area without clearing screen
-                print("\n" + "=" * 60)
-                print("Choose your action:")
-                for i, (label, _) in enumerate(actions):
-                    arrow = '→' if i == selected else ' '
-                    print(f"{arrow} {label}")
-                print("\nControls: W/S = Move, F = Confirm, Q = Cancel")
-                print("=" * 60)
             elif key == 's':
                 selected = (selected + 1) % len(actions)
-                # Just redraw the action selection area without clearing screen
-                print("\n" + "=" * 60)
-                print("Choose your action:")
-                for i, (label, _) in enumerate(actions):
-                    arrow = '→' if i == selected else ' '
-                    print(f"{arrow} {label}")
-                print("\nControls: W/S = Move, F = Confirm, Q = Cancel")
-                print("=" * 60)
             elif key == 'f':
                 return actions[selected][1]
 
@@ -695,7 +792,8 @@ class Game:
             # Check for chest
             chest = self.dungeon.get_chest_at(new_x, new_y)
             if chest:
-                loot = chest.open()
+                player_class = self.player.player_class if self.player else None
+                loot = chest.open(player_class)
                 print(f"\nYou opened a treasure chest!")
                 if loot:
                     for item in loot:

@@ -14,7 +14,8 @@ class Player(Entity):
         self.level = 1
         self.exp = 0
         self.exp_to_next = 10
-        self.learned_spells = set()  # Track which spells/skills are learned
+        self.learned_spells = set()  # Track which spells are learned
+        self.learned_skills = set()  # Track which skills are learned
         self.available_spells = {}  # Spells that can be learned
         self.available_skills = {} # Skills that can be learned
         self.dodging = False
@@ -32,46 +33,58 @@ class Player(Entity):
         """Setup stats and spells/skills based on class"""
         if self.player_class == 'warrior':
             self.max_hp = 15
-            self.max_mana = 10
+            self.max_mana = 0  # Warriors don't use mana
+            self.max_stamina = 20  # Warriors have stamina
+            self.stamina = 20
             self.attack = 4
             self.defense = 2
             self.available_skills = {
-                2: {'power_strike': {'name': 'Power Strike', 'damage': 8, 'description': 'A powerful attack that deals extra damage'}},
-                4: {'shield_bash': {'name': 'Shield Bash', 'damage': 6, 'stun': True, 'description': 'Bash with your shield, may stun the enemy'}},
-                6: {'battle_rage': {'name': 'Battle Rage', 'damage': 12, 'self_heal': 5, 'description': 'Enter a rage, dealing damage and healing yourself'}}
+                2: {'power_strike': {'name': 'Power Strike', 'damage': 8, 'stamina_cost': 5, 'description': 'A powerful attack that deals extra damage'}},
+                4: {'shield_bash': {'name': 'Shield Bash', 'damage': 6, 'stun': True, 'stamina_cost': 10, 'description': 'Bash with your shield, may stun the enemy'}},
+                6: {'battle_rage': {'name': 'Battle Rage', 'damage': 12, 'self_heal': 5, 'stamina_cost': 15, 'description': 'Enter a rage, dealing damage and healing yourself'}}
             }
+            self.dodge_chance = 0.0
         elif self.player_class == 'mage':
             self.max_hp = 8
             self.max_mana = 25
+            self.max_stamina = 0  # Mages don't use stamina
+            self.stamina = 0
             self.attack = 2
             self.defense = 1
             self.available_spells = {
                 1: {'fireball': {'name': 'Fireball', 'damage': 8, 'mana_cost': 5, 'description': 'Deals 8 damage'}},
                 3: {'lightning': {'name': 'Lightning', 'damage': 12, 'mana_cost': 10, 'description': 'Deals 12 damage'}},
                 5: {'ice_storm': {'name': 'Ice Storm', 'damage': 18, 'mana_cost': 15, 'description': 'Deals 18 damage'}},
-                7: {'meteor': {'name': 'Meteor', 'damage': 25, 'mana_cost': 20, 'description': 'Deals 25 damage'}}
+                7: {'meteor': {'name': 'Meteor', 'damage': 25, 'mana_cost': 25, 'description': 'Deals 25 damage'}}
             }
+            self.dodge_chance = 0.0
         elif self.player_class == 'rogue':
             self.max_hp = 10
-            self.max_mana = 15
+            self.max_mana = 0  # Rogues don't use mana
+            self.max_stamina = 15  # Rogues have stamina
+            self.stamina = 15
             self.attack = 3
             self.defense = 1
             self.available_skills = {
-                2: {'backstab': {'name': 'Backstab', 'damage': 10, 'description': 'A precise strike that deals extra damage'}},
-                4: {'evasion': {'name': 'Evasion', 'dodge': True, 'description': 'Attempt to dodge the next attack'}},
-                6: {'poison_strike': {'name': 'Poison Strike', 'damage': 8, 'poison': 3, 'description': 'Strike with a poisoned weapon'}}
+                2: {'backstab': {'name': 'Backstab', 'damage': 10, 'stamina_cost': 6, 'description': 'A precise strike that deals extra damage'}},
+                4: {'evasion': {'name': 'Evasion', 'dodge': True, 'stamina_cost': 4, 'description': 'Attempt to dodge the next attack'}},
+                6: {'poison_strike': {'name': 'Poison Strike', 'damage': 8, 'poison': 3, 'stamina_cost': 10, 'description': 'Strike with a poisoned weapon'}}
             }
+            self.dodge_chance = 0.2  # 20% passive dodge chance
         elif self.player_class == 'cleric':
             self.max_hp = 12
             self.max_mana = 20
+            self.max_stamina = 0  # Clerics don't use stamina
+            self.stamina = 0
             self.attack = 2
             self.defense = 2
             self.available_spells = {
                 1: {'heal': {'name': 'Heal', 'heal': 12, 'mana_cost': 6, 'description': 'Restores 12 HP'}},
                 3: {'smite': {'name': 'Smite', 'damage': 10, 'mana_cost': 8, 'description': 'Deals 10 damage'}},
                 5: {'divine_protection': {'name': 'Divine Protection', 'effect': 'shield', 'mana_cost': 10, 'description': 'Temporary defense boost'}},
-                7: {'resurrection': {'name': 'Resurrection', 'effect': 'revive', 'mana_cost': 25, 'description': 'Revive with full HP'}}
+                7: {'resurrection': {'name': 'Resurrection', 'effect': 'revive', 'mana_cost': 20, 'description': 'Revive with full HP'}}
             }
+            self.dodge_chance = 0.0
 
     def take_damage(self, amount):
         actual_damage = max(1, amount - self.defense)
@@ -89,6 +102,17 @@ class Player(Entity):
 
     def restore_mana(self, amount):
         self.mana = min(self.max_mana, self.mana + amount)
+
+    def use_stamina(self, amount):
+        """Use stamina if available"""
+        if self.stamina >= amount:
+            self.stamina -= amount
+            return True
+        return False
+
+    def restore_stamina(self, amount):
+        """Restore stamina"""
+        self.stamina = min(self.max_stamina, self.stamina + amount)
 
     def get_inventory_weight(self):
         """Calculate total weight of inventory"""
@@ -226,41 +250,50 @@ class Player(Entity):
         return leveled_up
 
     def unlock_all_skills_and_spells_for_level(self):
-        """Unlock all skills/spells for the current level and below"""
+        """Unlock all skills and spells available at current level"""
         if self.player_class in ['mage', 'cleric']:
             for level, level_spells in self.available_spells.items():
                 if level <= self.level:
-                    for spell_key in level_spells:
+                    for spell_key in level_spells.keys():
                         self.learned_spells.add(spell_key)
-        else:
+        if self.player_class in ['warrior', 'rogue']:
             for level, level_skills in self.available_skills.items():
                 if level <= self.level:
-                    for skill_key in level_skills:
-                        self.learned_spells.add(skill_key)
+                    for skill_key in level_skills.keys():
+                        self.learned_skills.add(skill_key)
 
     def level_up(self):
+        """Level up the player"""
         self.level += 1
         self.exp -= self.exp_to_next
-        self.exp_to_next = int(self.exp_to_next * 1.5)
+        self.exp_to_next = self.level * 10
         
         # Increase stats based on class
         if self.player_class == 'warrior':
             self.max_hp += 3
+            self.max_stamina += 2
             self.attack += 1
         elif self.player_class == 'mage':
-            self.max_mana += 4
+            self.max_hp += 1
+            self.max_mana += 3
             self.attack += 1
         elif self.player_class == 'rogue':
             self.max_hp += 2
+            self.max_stamina += 2
             self.attack += 1
         elif self.player_class == 'cleric':
             self.max_hp += 2
-            self.max_mana += 3
+            self.max_mana += 2
+            self.attack += 1
         
-        self.hp = self.max_hp  # Full heal on level up
-        self.mana = self.max_mana  # Full mana on level up
+        # Restore health and mana/stamina to full
+        self.hp = self.max_hp
+        if self.max_mana > 0:
+            self.mana = self.max_mana
+        if self.max_stamina > 0:
+            self.stamina = self.max_stamina
         
-        # Learn new spells or skills for all levels up to current
+        # Unlock new skills/spells
         self.unlock_all_skills_and_spells_for_level()
         return True
 
@@ -282,7 +315,7 @@ class Player(Entity):
             for level, level_skills in self.available_skills.items():
                 if level <= self.level:
                     for skill_key, skill_data in level_skills.items():
-                        if skill_key in self.learned_spells:  # Reuse learned_spells set
+                        if skill_key in self.learned_skills:  # Use learned_skills set
                             skills[skill_key] = skill_data
         return skills
 
@@ -291,7 +324,10 @@ class Player(Entity):
         return self.player_class in ['mage', 'cleric']
 
     def get_status(self):
-        return f"Class: {self.player_class.title()} | HP: {self.hp}/{self.max_hp} | MP: {self.mana}/{self.max_mana} | Level: {self.level} | Exp: {self.exp}/{self.exp_to_next} | ATK: {self.attack} | DEF: {self.defense}"
+        if self.max_stamina > 0:
+            return f"Class: {self.player_class.title()} | HP: {self.hp}/{self.max_hp} | SP: {self.stamina}/{self.max_stamina} | Level: {self.level} | Exp: {self.exp}/{self.exp_to_next} | ATK: {self.attack} | DEF: {self.defense}"
+        else:
+            return f"Class: {self.player_class.title()} | HP: {self.hp}/{self.max_hp} | MP: {self.mana}/{self.max_mana} | Level: {self.level} | Exp: {self.exp}/{self.exp_to_next} | ATK: {self.attack} | DEF: {self.defense}"
 
 class Monster:
     def __init__(self, x, y, monster_type):
@@ -313,7 +349,7 @@ class Monster:
             self.defense = 1
             self.speed = 1
             self.exp_value = 5
-            self.loot_table = ['gold', 'health_potion']
+            self.loot_table = ['gold', 'health_potion', 'stamina_potion']
             self.move_speed = 1
         elif monster_type == 'orc':
             self.char = 'o'
@@ -324,7 +360,7 @@ class Monster:
             self.defense = 2
             self.speed = 1
             self.exp_value = 10
-            self.loot_table = ['gold', 'health_potion', 'mana_potion']
+            self.loot_table = ['gold', 'health_potion', 'mana_potion', 'stamina_potion']
             self.move_speed = 2
         elif monster_type == 'troll':
             self.char = 't'
@@ -335,18 +371,18 @@ class Monster:
             self.defense = 3
             self.speed = 1
             self.exp_value = 20
-            self.loot_table = ['gold', 'health_potion', 'mana_potion', 'sword']
+            self.loot_table = ['gold', 'health_potion', 'mana_potion', 'stamina_potion', 'sword']
             self.move_speed = 3
         elif monster_type == 'dragon':
             self.char = 'D'
             self.name = 'Dragon'
-            self.hp = 50
-            self.max_hp = 50
-            self.attack = 12
+            self.hp = 40  # Reduced from 50
+            self.max_hp = 40  # Reduced from 50
+            self.attack = 10  # Reduced from 12
             self.defense = 5
             self.speed = 1
             self.exp_value = 50
-            self.loot_table = ['gold', 'health_potion', 'mana_potion', 'sword', 'armor']
+            self.loot_table = ['gold', 'health_potion', 'mana_potion', 'stamina_potion', 'sword', 'armor']
             self.move_speed = 1
         self.move_counter = 0
 
@@ -420,8 +456,8 @@ class Monster:
                 
         return True
 
-    def get_loot(self):
-        """Generate loot based on loot table"""
+    def get_loot(self, player_class=None):
+        """Generate loot based on loot table and player class"""
         import random
         if not self.loot_table:
             return []
@@ -434,7 +470,13 @@ class Monster:
             elif item == 'health_potion':
                 loot.append(('health_potion', 1))
             elif item == 'mana_potion':
-                loot.append(('mana_potion', 1))
+                # Only give mana potions to casters
+                if player_class in ['mage', 'cleric']:
+                    loot.append(('mana_potion', 1))
+            elif item == 'stamina_potion':
+                # Only give stamina potions to non-casters
+                if player_class in ['warrior', 'rogue']:
+                    loot.append(('stamina_potion', 1))
             elif item == 'sword':
                 loot.append(('sword', 1))
             elif item == 'armor':
@@ -466,6 +508,9 @@ class Item(Entity):
             elif 'mana' in self.effect:
                 player.restore_mana(self.effect['mana'])
                 return f"Used {self.name} and restored {self.effect['mana']} MP!"
+            elif 'stamina' in self.effect:
+                player.restore_stamina(self.effect['stamina'])
+                return f"Used {self.name} and restored {self.effect['stamina']} SP!"
         elif self.item_type == 'weapon':
             old_item = player.equip_item(self)
             if old_item:
@@ -486,8 +531,8 @@ class Chest(Entity):
         self.opened = False
         self.loot = []
 
-    def generate_loot(self):
-        """Generate random loot for the chest"""
+    def generate_loot(self, player_class=None):
+        """Generate random loot for the chest based on player class"""
         loot_options = [
             Item(self.x, self.y, '!', 'Health Potion', {'heal': 15}, 'potion'),
             Item(self.x, self.y, '~', 'Mana Potion', {'mana': 20}, 'potion'),
@@ -495,13 +540,26 @@ class Chest(Entity):
             Item(self.x, self.y, 'A', 'Leather Armor', {'defense': 2}, 'armor'),
             Item(self.x, self.y, '$', 'Gold Coins', {'gold': 50}, 'gold')
         ]
+        
+        # Add stamina potions for non-casters
+        if player_class in ['warrior', 'rogue']:
+            loot_options.append(Item(self.x, self.y, '&', 'Stamina Potion', {'stamina': 15}, 'potion'))
+        
+        # Filter out mana potions for non-casters
+        if player_class in ['warrior', 'rogue']:
+            loot_options = [item for item in loot_options if item.name != 'Mana Potion']
+        
+        # Filter out stamina potions for casters
+        if player_class in ['mage', 'cleric']:
+            loot_options = [item for item in loot_options if item.name != 'Stamina Potion']
+        
         num_items = random.randint(1, 3)
         self.loot = random.sample(loot_options, min(num_items, len(loot_options)))
         return self.loot
 
-    def open(self):
+    def open(self, player_class=None):
         if not self.opened:
             self.opened = True
             self.char = 'c'  # Opened chest
-            return self.generate_loot()
+            return self.generate_loot(player_class)
         return [] 

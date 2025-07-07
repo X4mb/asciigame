@@ -16,8 +16,8 @@ class Dungeon:
         self.generate()
 
     def generate(self):
-        # Use different seed for each level to ensure variety
-        random.seed(42 + self.level)
+        # Remove deterministic seed to ensure unique maps every time
+        # random.seed(42 + self.level)
         # Scale dungeon size with level
         self.width = self.base_width + (self.level - 1) * 4
         self.height = self.base_height + (self.level - 1) * 2
@@ -282,7 +282,7 @@ class Dungeon:
                     print(display_map[y][x], end='')
             print()  # New line after each row
         
-        print(f"\nLevel: {self.level} | Player position: {player_pos}")
+        print(f"\nLevel: {self.level}")
         if player:
             print("Controls: WASD to move, P to quit, I for inventory, X for " + ("spells" if player.is_caster() else "skills"))
         else:
