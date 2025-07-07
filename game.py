@@ -621,12 +621,24 @@ class Game:
                 return None
             elif key == 'w':
                 selected = (selected - 1) % len(actions)
-                # Clear screen and redraw
-                os.system('cls')
+                # Just redraw the action selection area without clearing screen
+                print("\n" + "=" * 60)
+                print("Choose your action:")
+                for i, (label, _) in enumerate(actions):
+                    arrow = '→' if i == selected else ' '
+                    print(f"{arrow} {label}")
+                print("\nControls: W/S = Move, F = Confirm, Q = Cancel")
+                print("=" * 60)
             elif key == 's':
                 selected = (selected + 1) % len(actions)
-                # Clear screen and redraw
-                os.system('cls')
+                # Just redraw the action selection area without clearing screen
+                print("\n" + "=" * 60)
+                print("Choose your action:")
+                for i, (label, _) in enumerate(actions):
+                    arrow = '→' if i == selected else ' '
+                    print(f"{arrow} {label}")
+                print("\nControls: W/S = Move, F = Confirm, Q = Cancel")
+                print("=" * 60)
             elif key == 'f':
                 return actions[selected][1]
 
