@@ -37,11 +37,14 @@ class Game:
         print("   HP: 12, MP: 20, ATK: 2, DEF: 2")
         print("   Spells: Heal (L1), Smite (L3), Divine Protection (L5), Resurrection (L7)")
         print()
-        print("Press 1-4 to select your class...")
+        print("Press 1-4 to select your class, or P to quit...")
         
         while True:
-            key = msvcrt.getch().decode('utf-8')
-            if key == '1':
+            key = msvcrt.getch().decode('utf-8').lower()
+            if key == 'p':
+                self.is_running = False
+                break
+            elif key == '1':
                 self.player = Player(1, 1, 'warrior')
                 break
             elif key == '2':
@@ -122,9 +125,12 @@ class Game:
                             print(f"   Value: {item.effect['gold']} gold")
                     print()
             print("\nControls:")
-            print("W/S: Move  F: " + ("Drop" if mode == 'drop' else "Use/Equip") + "  D: Drop mode  Q: Return")
+            print("W/S: Move  F: " + ("Drop" if mode == 'drop' else "Use/Equip") + "  D: Drop mode  Q: Return  P: Quit")
             key = msvcrt.getch().decode('utf-8').lower()
-            if key == 'q':
+            if key == 'p':
+                self.is_running = False
+                break
+            elif key == 'q':
                 break
             elif key == 'w' and self.player.inventory:
                 selected = (selected - 1) % len(self.player.inventory)
@@ -212,11 +218,14 @@ class Game:
                 skill_keys = list(learned_skills.keys())
                 for skill_key in skill_keys:
                     print(f"{skill_key.upper()}: Use {learned_skills[skill_key]['name']}")
-        print("Q: Return")
+        print("Q: Return  P: Quit")
         
         while True:
             key = msvcrt.getch().decode('utf-8').lower()
-            if key == 'q':
+            if key == 'p':
+                self.is_running = False
+                break
+            elif key == 'q':
                 break
             elif self.player.is_caster():
                 learned_spells = self.player.get_learned_spells()
@@ -274,7 +283,10 @@ class Game:
             
             while True:
                 key = msvcrt.getch().decode('utf-8').lower()
-                if key == 'q':
+                if key == 'p':
+                    self.is_running = False
+                    return None
+                elif key == 'q':
                     return None
                 elif key in learned_spells:
                     return ('spell', key)
@@ -304,7 +316,10 @@ class Game:
             
             while True:
                 key = msvcrt.getch().decode('utf-8').lower()
-                if key == 'q':
+                if key == 'p':
+                    self.is_running = False
+                    return None
+                elif key == 'q':
                     return None
                 elif key in learned_skills:
                     return ('skill', key)
@@ -324,6 +339,8 @@ class Game:
         """Display the combat screen with ASCII art"""
         if self.player is None:
             return
+            
+
             
         os.system('cls')
         
@@ -597,16 +614,19 @@ class Game:
             print("=" * 60)
             
             key = msvcrt.getch().decode('utf-8').lower()
-            if key == 'q':
+            if key == 'p':
+                self.is_running = False
+                return None
+            elif key == 'q':
                 return None
             elif key == 'w':
                 selected = (selected - 1) % len(actions)
-                # Clear the overlay area and redraw
-                print("\n" * 8)  # Clear the overlay
+                # Clear screen and redraw
+                os.system('cls')
             elif key == 's':
                 selected = (selected + 1) % len(actions)
-                # Clear the overlay area and redraw
-                print("\n" * 8)  # Clear the overlay
+                # Clear screen and redraw
+                os.system('cls')
             elif key == 'f':
                 return actions[selected][1]
 
