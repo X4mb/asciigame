@@ -1,0 +1,16 @@
+# ASCII Roguelike Dungeon Crawler - Dependencies
+# This project uses only Python standard library modules
+# No external dependencies required
+
+# Python version requirement
+# Python >= 3.6
+
+# Standard library modules used:
+# - sys
+# - random
+# - time
+# - os
+# - msvcrt (Windows-specific for input handling)
+
+# Note: This project is designed to run with only Python standard library
+# to ensure maximum compatibility and ease of installation. 
