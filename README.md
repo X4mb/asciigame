@@ -1,6 +1,6 @@
 # ASCII Roguelike Dungeon Crawler
 
-A classic roguelike dungeon crawler game built entirely in Python with ASCII graphics. Explore procedurally generated dungeons, battle monsters, collect loot, and level up your character across multiple classes.
+A classic roguelike dungeon crawler game built entirely in Python with ASCII graphics. Explore truly unique, procedurally generated dungeons, battle monsters (including bosses), collect loot, and level up your character across multiple classes.
 
 ![Game Screenshot](https://img.shields.io/badge/Game-ASCII%20Roguelike-blue)
 ![Python](https://img.shields.io/badge/Python-3.6+-green)
@@ -9,23 +9,24 @@ A classic roguelike dungeon crawler game built entirely in Python with ASCII gra
 ## 🎮 Features
 
 ### Character Classes
-- **Warrior**: High HP, strong melee combat with skills like Power Strike and Shield Bash
+- **Warrior**: High HP, strong melee combat with skills like Power Strike, Shield Bash, and Battle Rage
 - **Mage**: Powerful spellcaster with Fireball, Lightning, Ice Storm, and Meteor spells
-- **Rogue**: Stealthy fighter with Backstab, Evasion, and Poison Strike abilities
-- **Cleric**: Support class with healing spells and divine magic
+- **Rogue**: Stealthy fighter with Backstab, Evasion, Poison Strike, and a passive dodge ability
+- **Cleric**: Support class with healing spells and divine magic (Heal, Smite, Divine Protection, Resurrection)
 
 ### Game Mechanics
-- **Procedural Dungeon Generation**: Each level is uniquely generated using cellular automata
-- **Turn-based Combat**: Strategic battles with multiple action options
-- **Inventory System**: Weight-based inventory with item stacking and equipment
-- **Level Progression**: Gain experience, level up, and unlock new abilities
-- **Monster AI**: Intelligent enemies that pursue the player with line-of-sight detection
-- **Loot System**: Treasure chests and monster drops with various item types
+- **Procedural Dungeon Generation**: Each level is generated randomly every time—no two runs are ever the same
+- **Turn-based Combat**: Strategic battles with attacks, healing, running, skills, and spells
+- **Inventory System**: Weight-based inventory with item stacking, equipment, and drop/use modes
+- **Level Progression**: Gain experience, level up, and unlock new abilities for your class
+- **Monster AI**: Enemies pursue the player with line-of-sight detection and pathfinding
+- **Loot System**: Treasure chests and monster drops with weapons, armor, potions, gold, and more
+- **Bosses**: Face the Dragon and other powerful foes with unique stats and loot
 
 ### Visual Features
-- **ASCII Graphics**: Classic roguelike visuals with detailed combat animations
-- **Dynamic UI**: Real-time status display and interactive menus
-- **Combat Animations**: Visual feedback for attacks, damage, and special effects
+- **ASCII Graphics**: Classic roguelike visuals with detailed combat and spell/skill animations
+- **Dynamic UI**: Real-time status display, potion counters, and interactive menus
+- **Combat Animations**: Visual feedback for attacks, spells, skills, and special effects
 
 ## 🚀 Quick Start
 
@@ -46,6 +47,7 @@ python main.py
 ```
 
 ### Running Tests
+The test suite is fully automated and non-interactive. It covers all game mechanics and disables all prompts during testing.
 ```bash
 python test_game.py
 ```
@@ -60,9 +62,9 @@ python test_game.py
 
 ### Combat Controls
 - **A**: Attack
-- **H**: Heal (restores 5 HP)
+- **H**: Heal (restores 5 HP or uses a potion if available)
 - **R**: Attempt to run away
-- **X**: Cast spell or use skill
+- **X**: Cast spell or use skill (if available)
 
 ### Inventory Management
 - **W/S**: Navigate items
@@ -79,7 +81,7 @@ asciigame/
 ├── dungeon.py           # Dungeon generation and management
 ├── entities.py          # Player, monsters, items, and chests
 ├── ascii_art.py         # ASCII graphics and animations
-├── test_game.py         # Comprehensive test suite
+├── test_game.py         # Comprehensive, non-interactive test suite
 └── LICENSE              # MIT License
 ```
 
@@ -89,7 +91,7 @@ asciigame/
 Each class has unique progression paths:
 - **Warrior**: Gains HP and attack power, learns combat skills
 - **Mage**: Gains mana and learns powerful offensive spells
-- **Rogue**: Gains HP and learns stealth/agility skills
+- **Rogue**: Gains HP and learns stealth/agility skills, with a passive dodge
 - **Cleric**: Gains HP and mana, learns healing and divine spells
 
 ### Combat System
@@ -97,9 +99,11 @@ Each class has unique progression paths:
 - Damage calculation based on attack vs defense
 - Special effects: stun, poison, dodge, healing
 - Monster AI with line-of-sight detection and pursuit
+- Boss monsters (e.g., Dragon) with unique stats and loot
 
 ### Dungeon Generation
 - Procedural generation using cellular automata
+- Dungeons are always unique—never cached or repeated
 - Scaled difficulty with level progression
 - Connected rooms and corridors
 - Strategic placement of monsters, chests, and stairs
@@ -108,18 +112,21 @@ Each class has unique progression paths:
 - Weight-based carrying system
 - Item stacking for consumables
 - Equipment system for weapons and armor
-- Various item types: weapons, armor, potions, gold
+- Various item types: weapons, armor, potions, gold, scrolls
 
 ## 🧪 Testing
 
-The project includes a comprehensive test suite covering:
+The project includes a comprehensive, fully automated test suite covering:
 - Character class functionality
-- Combat mechanics
+- Combat mechanics (including skills, spells, and boss fights)
 - Inventory management
-- Dungeon generation
+- Dungeon generation (uniqueness and functionality)
 - Loot systems
 - Level progression
 - Monster AI behavior
+- UI and animation methods
+
+**Test mode disables all interactive prompts.**
 
 Run tests with:
 ```bash
@@ -151,30 +158,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 🎯 Future Enhancements
-
-- [ ] Save/load game functionality
-- [ ] More character classes and races
-- [ ] Additional monster types and bosses
-- [ ] Magic items and enchantments
-- [ ] Multiplayer support
-- [ ] Sound effects and music
-- [ ] Cross-platform compatibility
-- [ ] Modding support
-
 ## 📊 Game Statistics
 
 - **Lines of Code**: ~2,000+
 - **Character Classes**: 4
-- **Monster Types**: 3 (Goblin, Orc, Troll)
+- **Monster Types**: 4 (Goblin, Orc, Troll, Dragon)
 - **Item Types**: 5 (Weapons, Armor, Potions, Gold, Scrolls)
-- **Spells/Skills**: 12 total across all classes
-
-## 🏆 Acknowledgments
-
-- Inspired by classic roguelike games like NetHack and Rogue
-- Built with pure Python for maximum accessibility
-- ASCII art created for immersive retro gaming experience
+- **Spells/Skills**: 12+ total across all classes
 
 ---
 
