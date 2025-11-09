@@ -51,13 +51,3 @@ python test_game.py
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Game Statistics
-
-- **Lines of Code**: ~2,000+
-- **Character Classes**: 4
-- **Monster Types**: 4 (Goblin, Orc, Troll, Dragon)
-- **Item Types**: 5 (Weapons, Armor, Potions, Gold, Scrolls)
-- **Spells/Skills**: 12+ total across all classes
-
----
