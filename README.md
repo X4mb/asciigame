@@ -12,7 +12,7 @@
 ### Installation
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/ascii-roguelike.git
+git clone https://github.com/x4mb/ascii-roguelike.git
 cd ascii-roguelike
 ```
 
